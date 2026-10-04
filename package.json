@@ -1,0 +1,71 @@
+{
+  "name": "@serpkite/ai-sdk",
+  "version": "0.1.0",
+  "description": "SerpKite tools for the Vercel AI SDK: Google search, news, maps, scholar, webpage-to-Markdown, extract, site map and crawl for generateText, streamText and agents in Next.js, Node and edge runtimes.",
+  "license": "MIT",
+  "author": "SerpKite",
+  "homepage": "https://serpkite.com/integrations/vercel-ai-sdk",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SerpKite/serpkite-ai-sdk.git"
+  },
+  "bugs": "https://github.com/SerpKite/serpkite-ai-sdk/issues",
+  "keywords": [
+    "serpkite",
+    "ai-sdk",
+    "vercel",
+    "nextjs",
+    "tools",
+    "web-search",
+    "google",
+    "serp",
+    "agents",
+    "llm"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "serpkite": "^0.4.0"
+  },
+  "peerDependencies": {
+    "ai": "^5.0.0 || ^6.0.0 || ^7.0.0",
+    "zod": "^3.25.76 || ^4.1.8"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.0",
+    "ai": "7.0.127",
+    "tsup": "^8.5.0",
+    "typescript": "^6.0.3",
+    "zod": "4.6.5"
+  }
+}
