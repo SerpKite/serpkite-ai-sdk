@@ -139,8 +139,17 @@ export const reviewsInput = z
     fid: z.string().describe("Google fid of the place (instead of place_id)"),
     sort: z
       .enum(["most_relevant", "newest", "highest_rating", "lowest_rating"])
-      .describe("Review order. Default most_relevant"),
-    num: z.number().int().min(1).max(50).describe("Reviews per page, up to 50. Default 10"),
+      .describe(
+        "Review order. Only most_relevant is served; other orders return 400 (Google shows them only to signed-in visitors)",
+      ),
+    num: z
+      .number()
+      .int()
+      .min(1)
+      .max(50)
+      .describe(
+        "Reviews per page. Default 10; the first 10 reviews of a place are all Google shows",
+      ),
     page_token: z
       .string()
       .describe("next_page_token from the previous page, unchanged, for the next page"),
