@@ -74,7 +74,7 @@ runtime (`export const runtime = "edge"`).
 | `videos` | `/v1/videos` | Videos with channel, duration and date |
 | `maps` | `/v1/maps` | Places with address, category, rating, phone, hours, coordinates and `place_id` |
 | `places` | `/v1/places` | Google local results (the same places as `maps`) |
-| `place` | `/v1/place` | One place's full listing: country, time zone, weekly hours, description, photos |
+| `place` | `/v1/place` | One place's full listing: country, time zone, weekly hours, description, photos (Google ids, or a Yandex Maps `oid`) |
 | `reviews` | `/v1/reviews` | Reviews of a place, paged with `page_token` |
 | `shopping` | `/v1/shopping` | Products with price and merchant |
 | `scholar` | `/v1/scholar` | Papers with citations and PDF links |

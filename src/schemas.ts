@@ -163,6 +163,12 @@ export const placeInput = z
     place_id: z.string().describe("Google place id, from a maps or places result"),
     cid: z.string().describe("Google cid of the place (instead of place_id)"),
     fid: z.string().describe("Google fid of the place (instead of place_id)"),
+    oid: z
+      .string()
+      .regex(/^[0-9]{1,20}$/)
+      .describe(
+        "Yandex Maps organisation id (digits, from yandex.ru/maps/org/<name>/<oid>/), instead of the Google ids",
+      ),
     country,
     language: language.describe(
       "Language of the address, categories, hours and description, e.g. en, ru. Default en",

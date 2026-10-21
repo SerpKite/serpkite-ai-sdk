@@ -305,7 +305,7 @@ const ALLOWED: Record<string, { allowed: string[]; required: string[] }> = {
     allowed: ["place_id", "cid", "fid", "sort", "page_token", "num", "country", "language"],
     required: [],
   },
-  place: { allowed: ["place_id", "cid", "fid", "country", "language"], required: [] },
+  place: { allowed: ["place_id", "cid", "fid", "oid", "country", "language"], required: [] },
   webpage: {
     allowed: ["url", "country", "include_html", "include_links", "include_images"],
     required: ["url"],

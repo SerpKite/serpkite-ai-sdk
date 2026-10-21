@@ -174,7 +174,7 @@ const DESCRIPTIONS = {
   places:
     "Google local results: businesses with address, category, rating, phone, hours, coordinates and place_id (the same places as maps). 1 credit.",
   place:
-    "Get the full Google Maps listing of one place: address, country, coordinates, time zone, categories, opening hours per weekday, website, phone, rating, description and photos. Pass the place_id (or cid / fid) from a maps or places result. 1 credit.",
+    "Get the full Google Maps listing of one place: address, country, coordinates, time zone, categories, opening hours per weekday, website, phone, rating, description and photos. Pass the place_id (or cid / fid) from a maps or places result, or the oid of a Yandex Maps organisation. 1 credit.",
   reviews:
     "Get Google reviews of one place. Pass the place_id (or cid / fid) from a maps or places result; page with page_token = next_page_token. 1 credit per page.",
   shopping:
