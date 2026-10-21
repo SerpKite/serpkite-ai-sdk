@@ -8,6 +8,7 @@ import {
   serpkiteCrawlResult,
   serpkiteExtract,
   serpkiteMaps,
+  serpkitePlace,
   serpkiteRank,
   serpkiteReviews,
   serpkiteSearch,
@@ -130,17 +131,20 @@ describe("search verticals", () => {
     expect(err.code).toBe("insufficient_credits");
   });
 
-  test("maps, reviews and webpage hit their endpoints", async () => {
+  test("maps, place, reviews and webpage hit their endpoints", async () => {
     const { fetch, seen } = mockFetch(() => markdown("ok"));
     await run(serpkiteMaps(opts(fetch)), { q: "coffee", ll: "@52.52,13.40,14z" });
+    await run(serpkitePlace(opts(fetch)), { place_id: "ChIJ", language: "ru" });
     await run(serpkiteReviews(opts(fetch)), { place_id: "ChIJ", sort: "newest" });
     await run(serpkiteWebpage(opts(fetch)), { url: "https://example.com/" });
     expect(seen.map((r) => new URL(r.url).pathname)).toEqual([
       "/v1/maps",
+      "/v1/place",
       "/v1/reviews",
       "/v1/webpage",
     ]);
-    expect(seen[1].body).toEqual({ place_id: "ChIJ", sort: "newest", format: "markdown" });
+    expect(seen[1].body).toEqual({ place_id: "ChIJ", language: "ru", format: "markdown" });
+    expect(seen[2].body).toEqual({ place_id: "ChIJ", sort: "newest", format: "markdown" });
   });
 });
 
@@ -301,6 +305,7 @@ const ALLOWED: Record<string, { allowed: string[]; required: string[] }> = {
     allowed: ["place_id", "cid", "fid", "sort", "page_token", "num", "country", "language"],
     required: [],
   },
+  place: { allowed: ["place_id", "cid", "fid", "country", "language"], required: [] },
   webpage: {
     allowed: ["url", "country", "include_html", "include_links", "include_images"],
     required: ["url"],

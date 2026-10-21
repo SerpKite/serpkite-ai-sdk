@@ -158,6 +158,18 @@ export const reviewsInput = z
   })
   .partial();
 
+export const placeInput = z
+  .object({
+    place_id: z.string().describe("Google place id, from a maps or places result"),
+    cid: z.string().describe("Google cid of the place (instead of place_id)"),
+    fid: z.string().describe("Google fid of the place (instead of place_id)"),
+    country,
+    language: language.describe(
+      "Language of the address, categories, hours and description, e.g. en, ru. Default en",
+    ),
+  })
+  .partial();
+
 export const webpageInput = z
   .object({
     url,

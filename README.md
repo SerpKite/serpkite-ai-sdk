@@ -1,7 +1,7 @@
 # @serpkite/ai-sdk
 
 [SerpKite](https://serpkite.com) tools for the [Vercel AI SDK](https://ai-sdk.dev): Google search,
-news, maps, reviews, shopping, scholar, patents, webpage-to-Markdown, multi-URL extract, site map
+news, maps, place details, reviews, shopping, scholar, patents, webpage-to-Markdown, multi-URL extract, site map
 and crawl, ready for `generateText`, `streamText` and agents in Next.js, Node and edge runtimes.
 
 - One line per tool set: `tools: serpkiteTools()`.
@@ -72,8 +72,9 @@ runtime (`export const runtime = "edge"`).
 | `news` | `/v1/news` | Google News articles |
 | `images` | `/v1/images` | Image URLs and source pages |
 | `videos` | `/v1/videos` | Videos with channel, duration and date |
-| `maps` | `/v1/maps` | Places with rating, phone, hours, coordinates and `place_id` |
-| `places` | `/v1/places` | Google local pack |
+| `maps` | `/v1/maps` | Places with address, category, rating, phone, hours, coordinates and `place_id` |
+| `places` | `/v1/places` | Google local results (the same places as `maps`) |
+| `place` | `/v1/place` | One place's full listing: country, time zone, weekly hours, description, photos |
 | `reviews` | `/v1/reviews` | Reviews of a place, paged with `page_token` |
 | `shopping` | `/v1/shopping` | Products with price and merchant |
 | `scholar` | `/v1/scholar` | Papers with citations and PDF links |

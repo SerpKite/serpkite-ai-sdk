@@ -11,6 +11,7 @@ import {
   type MapResponse,
   type NewsResponse,
   type PatentsResponse,
+  type PlaceParams,
   type PlacesResponse,
   type RankParams,
   type RankResponse,
@@ -80,6 +81,7 @@ export type NewsToolInput = In<typeof s.newsInput>;
 export type ImagesToolInput = In<typeof s.imagesInput>;
 export type VideosToolInput = In<typeof s.videosInput>;
 export type PlacesToolInput = In<typeof s.placesInput>;
+export type PlaceToolInput = In<typeof s.placeInput>;
 export type ReviewsToolInput = In<typeof s.reviewsInput>;
 export type ShoppingToolInput = In<typeof s.shoppingInput>;
 export type ScholarToolInput = In<typeof s.scholarInput>;
@@ -130,6 +132,7 @@ type FormatMethod =
   | "videos"
   | "maps"
   | "places"
+  | "place"
   | "reviews"
   | "shopping"
   | "scholar"
@@ -167,9 +170,11 @@ const DESCRIPTIONS = {
   images: "Search Google Images: image URLs, sizes, titles and source pages. 1 credit.",
   videos:
     "Search Google Videos (YouTube and other sites): title, link, channel, duration and date. 1 credit.",
-  maps: 'Find places on Google Maps: name, address, rating, review count, phone, website, hours, coordinates and place_id. Put the area in q ("coffee in Berlin") or set location or ll. 1 credit.',
+  maps: 'Find places on Google Maps: name, address, category, rating, review count, phone, website, hours, coordinates and place_id. Put the area in q ("coffee in Berlin") or set location or ll. 1 credit.',
   places:
-    "Google local results (the local pack): businesses with address, rating, phone and place_id. 1 credit.",
+    "Google local results: businesses with address, category, rating, phone, hours, coordinates and place_id (the same places as maps). 1 credit.",
+  place:
+    "Get the full Google Maps listing of one place: address, country, coordinates, time zone, categories, opening hours per weekday, website, phone, rating, description and photos. Pass the place_id (or cid / fid) from a maps or places result. 1 credit.",
   reviews:
     "Get Google reviews of one place. Pass the place_id (or cid / fid) from a maps or places result; page with page_token = next_page_token. 1 credit per page.",
   shopping:
@@ -240,6 +245,14 @@ const build = {
       "places",
       s.placesInput,
       DESCRIPTIONS.places,
+      o,
+      c,
+    ),
+  place: <F extends ToolFormat>(o: FormatToolOptions<PlaceParams, F>, c: GetClient) =>
+    formatTool<PlaceToolInput, FormatOutput<F, PlacesResponse>>(
+      "place",
+      s.placeInput,
+      DESCRIPTIONS.place,
       o,
       c,
     ),
@@ -358,6 +371,9 @@ export const serpkiteMaps = <F extends ToolFormat = "markdown">(o: Fmt<SearchPar
 /** Google local results. */
 export const serpkitePlaces = <F extends ToolFormat = "markdown">(o: Fmt<SearchParams, F> = {}) =>
   build.places(o, lazyClient(o));
+/** One place's full listing (hours, country, time zone, photos) by `place_id`, `cid` or `fid`. */
+export const serpkitePlace = <F extends ToolFormat = "markdown">(o: Fmt<PlaceParams, F> = {}) =>
+  build.place(o, lazyClient(o));
 /** Reviews of a place by `place_id`, `cid` or `fid`. */
 export const serpkiteReviews = <F extends ToolFormat = "markdown">(o: Fmt<ReviewsParams, F> = {}) =>
   build.reviews(o, lazyClient(o));
@@ -404,6 +420,7 @@ export interface SerpKiteToolSet<F extends ToolFormat = "markdown"> {
   videos: Tool<VideosToolInput, FormatOutput<F, VideosResponse>>;
   maps: Tool<PlacesToolInput, FormatOutput<F, PlacesResponse>>;
   places: Tool<PlacesToolInput, FormatOutput<F, PlacesResponse>>;
+  place: Tool<PlaceToolInput, FormatOutput<F, PlacesResponse>>;
   reviews: Tool<ReviewsToolInput, FormatOutput<F, ReviewsResponse>>;
   shopping: Tool<ShoppingToolInput, FormatOutput<F, ShoppingResponse>>;
   scholar: Tool<ScholarToolInput, FormatOutput<F, ScholarResponse>>;
