@@ -4,12 +4,15 @@ import { MockLanguageModelV4 } from "ai/test";
 import {
   SerpKite,
   SerpKiteError,
+  serpkiteAnswer,
   serpkiteCrawl,
   serpkiteCrawlResult,
   serpkiteExtract,
   serpkiteMaps,
   serpkitePlace,
   serpkiteRank,
+  serpkiteResearch,
+  serpkiteResearchResult,
   serpkiteReviews,
   serpkiteSearch,
   serpkiteTools,
@@ -190,6 +193,58 @@ describe("site tools", () => {
   });
 });
 
+describe("AI tools", () => {
+  test("answer posts the question and returns the cited answer", async () => {
+    const body = {
+      request: { endpoint: "answer", q: "what is rag" },
+      answer: "Retrieval-augmented generation [1].",
+      citations: [{ index: 1, title: "RAG", link: "https://a.test/" }],
+      results: [{ index: 1, title: "RAG", link: "https://a.test/" }],
+      meta: { request_id: "r", credits_used: 5, credits: { search: 1, answer: 4 } },
+    };
+    const { fetch, seen } = mockFetch(() => json(body));
+    const out = await run(serpkiteAnswer({ ...opts(fetch), fixed: { depth: "fast" } }), {
+      q: "what is rag",
+      depth: "standard",
+      num_sources: null,
+    });
+    expect(out).toEqual(body);
+    expect(seen[0].url).toBe("https://api.serpkite.com/v1/answer");
+    expect(seen[0].body).toEqual({ q: "what is rag", depth: "fast" });
+  });
+
+  test("search include_answer and extract summary reach the API", async () => {
+    const { fetch, seen } = mockFetch(() => json({ results: [], failed: [], meta: {} }));
+    await run(serpkiteSearch(opts(fetch)), { q: "rag", include_answer: true });
+    await run(serpkiteExtract(opts(fetch)), { urls: ["https://a.test/"], summary: true });
+    expect(seen[0].body).toEqual({ q: "rag", include_answer: true, format: "markdown" });
+    expect(seen[1].body).toEqual({ urls: ["https://a.test/"], summary: true });
+  });
+
+  test("research returns the task, or waits for the report", async () => {
+    const created = { id: "r1", kind: "research", status: "queued", poll_url: "/v1/research/r1" };
+    const done = {
+      id: "r1",
+      kind: "research",
+      status: "completed",
+      result: { report: "# Report [1]", citations: [], sources: [], queries: [] },
+    };
+    const { fetch, seen } = mockFetch((r) => (r.method === "POST" ? json(created) : json(done)));
+    expect(await run(serpkiteResearch(opts(fetch)), { input: "vector dbs" })).toEqual(created);
+    const waiting = serpkiteResearch({ ...opts(fetch), wait: { pollIntervalMs: 1 } });
+    expect(waiting.description).toContain("Takes one to several minutes");
+    expect(await run(waiting, { input: "vector dbs", effort: "lite" })).toEqual(done);
+    expect(await run(serpkiteResearchResult(opts(fetch)), { id: "r1" })).toEqual(done);
+    expect(seen[1].body).toEqual({ input: "vector dbs", effort: "lite" });
+    expect(seen.map((r) => `${r.method} ${new URL(r.url).pathname}`)).toEqual([
+      "POST /v1/research",
+      "POST /v1/research",
+      "GET /v1/research/r1",
+      "GET /v1/research/r1",
+    ]);
+  });
+});
+
 describe("serpkiteTools", () => {
   test("all tools by default, with only and exclude", () => {
     expect(Object.keys(serpkiteTools({ apiKey: "k" })).sort()).toEqual([...TOOL_NAMES].sort());
@@ -250,6 +305,7 @@ const ALLOWED: Record<string, { allowed: string[]; required: string[] }> = {
       "start_date",
       "end_date",
       "highlights",
+      "include_answer",
     ],
     required: ["q"],
   },
@@ -269,6 +325,7 @@ const ALLOWED: Record<string, { allowed: string[]; required: string[] }> = {
       "boost_domains",
       "start_date",
       "end_date",
+      "include_answer",
     ],
     required: ["q"],
   },
@@ -322,6 +379,9 @@ const ALLOWED: Record<string, { allowed: string[]; required: string[] }> = {
       "max_age",
       "country",
       "timeout",
+      "summary",
+      "output_schema",
+      "prompt",
     ],
     required: ["urls"],
   },
@@ -361,6 +421,46 @@ const ALLOWED: Record<string, { allowed: string[]; required: string[] }> = {
     required: ["url"],
   },
   crawl_result: { allowed: ["id"], required: ["id"] },
+  // AnswerRequest and ResearchRequest (backend/api/serp-api.yaml).
+  answer: {
+    allowed: [
+      "q",
+      "depth",
+      "num_sources",
+      "output_schema",
+      "country",
+      "language",
+      "location",
+      "uule",
+      "time",
+      "tbs",
+      "device",
+      "safe",
+      "autocorrect",
+      "max_age",
+      "engine",
+      "include_domains",
+      "exclude_domains",
+      "boost_domains",
+      "start_date",
+      "end_date",
+    ],
+    required: ["q"],
+  },
+  research: {
+    allowed: [
+      "input",
+      "effort",
+      "output_schema",
+      "country",
+      "language",
+      "include_domains",
+      "exclude_domains",
+      "webhook_url",
+    ],
+    required: ["input"],
+  },
+  research_result: { allowed: ["id"], required: ["id"] },
 };
 ALLOWED.videos = ALLOWED.images;
 ALLOWED.places = ALLOWED.maps;

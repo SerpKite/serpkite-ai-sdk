@@ -1,8 +1,8 @@
 # @serpkite/ai-sdk
 
 [SerpKite](https://serpkite.com) tools for the [Vercel AI SDK](https://ai-sdk.dev): Google search,
-news, maps, place details, reviews, shopping, scholar, patents, webpage-to-Markdown, multi-URL extract, site map
-and crawl, ready for `generateText`, `streamText` and agents in Next.js, Node and edge runtimes.
+news, maps, place details, reviews, shopping, scholar, patents, cited answers, deep research,
+webpage-to-Markdown, multi-URL extract, site map and crawl, ready for `generateText`, `streamText` and agents in Next.js, Node and edge runtimes.
 
 - One line per tool set: `tools: serpkiteTools()`.
 - Markdown results by default, which use few tokens and need no post-processing.
@@ -68,8 +68,8 @@ runtime (`export const runtime = "edge"`).
 
 | Name | Endpoint | What the model gets |
 | --- | --- | --- |
-| `search` | `/v1/search` | Google organic results, answer box, knowledge graph, People also ask; `include_content` reads the top pages |
-| `news` | `/v1/news` | Google News articles |
+| `search` | `/v1/search` | Google organic results, answer box, knowledge graph, People also ask; `include_content` reads the top pages, `include_answer` adds a cited answer |
+| `news` | `/v1/news` | Google News articles (`include_answer` adds a cited answer) |
 | `images` | `/v1/images` | Image URLs and source pages |
 | `videos` | `/v1/videos` | Videos with channel, duration and date |
 | `maps` | `/v1/maps` | Places with address, category, rating, phone, hours, coordinates and `place_id` |
@@ -81,11 +81,14 @@ runtime (`export const runtime = "edge"`).
 | `patents` | `/v1/patents` | Patents |
 | `autocomplete` | `/v1/autocomplete` | Query suggestions |
 | `webpage` | `/v1/webpage` | One URL (HTML or PDF) as clean Markdown |
-| `extract` | `/v1/extract` | Up to 20 URLs, optionally reduced to query-ranked passages |
+| `extract` | `/v1/extract` | Up to 20 URLs, optionally reduced to query-ranked passages or summarised (`summary`) |
 | `map` | `/v1/map` | A site's URLs from its sitemaps and links |
 | `rank` | `/v1/rank` | A domain's Google position for a keyword |
 | `crawl` | `/v1/crawl` | Starts an async site crawl (returns a task id) |
 | `crawl_result` | `/v1/crawl/{id}` | The crawl's status and pages |
+| `answer` | `/v1/answer` | A short Markdown answer from live Google results, citing numbered sources (`[n]`), and the cited links |
+| `research` | `/v1/research` | Starts an async deep-research task (returns a task id) |
+| `research_result` | `/v1/research/{id}` | The research task's status, progress and cited Markdown report |
 
 Each tool also has its own factory (`serpkiteSearch()`, `serpkiteWebpage()`, …) so you can name it
 yourself: `tools: { webSearch: serpkiteSearch() }`. Credits per call are listed at
@@ -109,11 +112,21 @@ serpkiteSearch({
 });
 
 serpkiteCrawl({ wait: { timeoutMs: 120_000 } }); // wait for the pages instead of returning a task id
+
+serpkiteAnswer({ fixed: { depth: "fast" } }); // answers from the result page only (cheapest)
+serpkiteResearch({ wait: true, fixed: { effort: "lite" } }); // returns the finished report (1-2 minutes)
+serpkiteExtract({ fixed: { output_schema: { type: "object", properties: { price: { type: "number" } } } } }); // JSON per page
 ```
+
+`research` without `wait` returns a task id and the model calls `research_result` later; with `wait`
+the tool returns the finished task, so raise the route's `maxDuration` (deep research can take
+several minutes). Research is charged a flat price per `effort` only when the report is written;
+the model part of an AI step that fails (`ai_unavailable`) is free. Prices: [serpkite.com/pricing](https://serpkite.com/pricing).
 
 `fixed` is how you pin the request fields that the model never sees: `engine` (`"auto"` falls back
 to other search engines when Google is unavailable), `max_age` (accept cached results at half the
-credits), `fields`, `uule`, `tbs` and `ads`.
+credits), `fields`, `uule`, `tbs` and `ads`; and the AI knobs `output_schema` / `prompt` (answer,
+extract and research) and `webhook_url` (research).
 
 Errors are thrown as `SerpKiteError` (`status`, `code`, `requestId`). The AI SDK turns a thrown
 error into a `tool-error` part the model can read, so a failed search doesn't end the run.

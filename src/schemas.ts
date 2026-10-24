@@ -50,6 +50,12 @@ const maxTokens = z
   .max(100_000)
   .describe("Trim each page to about this many tokens");
 
+const includeAnswer = z
+  .boolean()
+  .describe(
+    "Also write a short answer over the results that cites them with [n] markers (extra credits; free if it fails)",
+  );
+
 const geo = { q, country, language, location, page };
 const filters = {
   include_domains: domains("Only results from these sources"),
@@ -81,6 +87,7 @@ export const searchInput = z
     highlights: z
       .boolean()
       .describe("With include_content: return only the 3 passages of each page most relevant to q"),
+    include_answer: includeAnswer,
   })
   .partial()
   .required({ q: true });
@@ -92,6 +99,7 @@ export const newsInput = z
     num: z.number().int().min(10).max(100).describe("Number of articles, 10 (default) up to 100"),
     time,
     boost_domains: domains("Move articles from these sources to the top"),
+    include_answer: includeAnswer,
   })
   .partial()
   .required({ q: true });
@@ -200,6 +208,11 @@ export const extractInput = z
       .describe("Return only this many passages per page ranked against query (0 = whole page)"),
     max_tokens: maxTokens,
     country: country.describe("Fetch through an exit in this country"),
+    summary: z
+      .boolean()
+      .describe(
+        "Add a 3-6 sentence summary of each page, focused on query when set (extra credits per page)",
+      ),
   })
   .partial()
   .required({ urls: true });
@@ -250,4 +263,50 @@ export const crawlInput = z
 
 export const crawlResultInput = z.object({
   id: z.string().min(1).describe("The task id returned by the crawl tool"),
+});
+
+export const answerInput = z
+  .object({
+    q: z.string().min(1).max(2048).describe("The question to answer from live Google results"),
+    depth: z
+      .enum(["fast", "standard"])
+      .describe(
+        "fast answers from the result page (cheapest); standard (default) also reads the top pages",
+      ),
+    num_sources: z
+      .number()
+      .int()
+      .min(1)
+      .max(5)
+      .describe("Pages read with depth standard. Default 3"),
+    country,
+    language,
+    location,
+    time,
+    include_domains: domains("Only results from these sources"),
+    exclude_domains: domains("Drop results from these sources"),
+    start_date: date("on or after"),
+    end_date: date("on or before"),
+  })
+  .partial()
+  .required({ q: true });
+
+export const researchInput = z
+  .object({
+    input: z.string().min(1).max(8000).describe("The research task or question in plain words"),
+    effort: z
+      .enum(["lite", "standard", "deep"])
+      .describe(
+        "How much to search and read: lite (fastest, cheapest), standard (default) or deep (most thorough, most credits)",
+      ),
+    country,
+    language,
+    include_domains: domains("Only research these sources"),
+    exclude_domains: domains("Never use these sources"),
+  })
+  .partial()
+  .required({ input: true });
+
+export const researchResultInput = z.object({
+  id: z.string().min(1).describe("The task id returned by the research tool"),
 });

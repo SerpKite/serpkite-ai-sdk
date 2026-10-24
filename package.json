@@ -1,7 +1,7 @@
 {
   "name": "@serpkite/ai-sdk",
-  "version": "0.3.0",
-  "description": "SerpKite tools for the Vercel AI SDK: Google search, news, maps, place details, scholar, webpage-to-Markdown, extract, site map and crawl for generateText, streamText and agents in Next.js, Node and edge runtimes.",
+  "version": "0.4.0",
+  "description": "SerpKite tools for the Vercel AI SDK: Google search, news, maps, place details, scholar, cited answers, deep research, webpage-to-Markdown, extract, site map and crawl for generateText, streamText and agents in Next.js, Node and edge runtimes.",
   "license": "MIT",
   "author": "SerpKite",
   "homepage": "https://serpkite.com/integrations/vercel-ai-sdk",
@@ -55,7 +55,7 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
-    "serpkite": "^0.6.0"
+    "serpkite": "^0.7.0"
   },
   "peerDependencies": {
     "ai": "^5.0.0 || ^6.0.0 || ^7.0.0",

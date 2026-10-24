@@ -1,5 +1,7 @@
 import { type Tool, tool } from "ai";
 import {
+  type AnswerParams,
+  type AnswerResponse,
   type AutocompleteResponse,
   type CompactResponse,
   type CrawlParams,
@@ -15,6 +17,8 @@ import {
   type PlacesResponse,
   type RankParams,
   type RankResponse,
+  type ResearchParams,
+  type ResearchTask,
   type ReviewsParams,
   type ReviewsResponse,
   type ScholarResponse,
@@ -74,6 +78,15 @@ export interface CrawlToolOptions extends ParamsToolOptions<CrawlParams> {
   wait?: boolean | WaitOptions;
 }
 
+export interface ResearchToolOptions extends ParamsToolOptions<ResearchParams> {
+  /**
+   * Wait for the report and return the finished task instead of a task id. Off by default:
+   * research takes from about a minute (`lite`) to several (`deep`), longer than many
+   * serverless functions may run. Pass `WaitOptions` to bound the wait.
+   */
+  wait?: boolean | WaitOptions;
+}
+
 type In<S extends z.ZodType> = z.infer<S>;
 
 export type SearchToolInput = In<typeof s.searchInput>;
@@ -93,6 +106,9 @@ export type MapToolInput = In<typeof s.mapInput>;
 export type RankToolInput = In<typeof s.rankInput>;
 export type CrawlToolInput = In<typeof s.crawlInput>;
 export type CrawlResultToolInput = In<typeof s.crawlResultInput>;
+export type AnswerToolInput = In<typeof s.answerInput>;
+export type ResearchToolInput = In<typeof s.researchInput>;
+export type ResearchResultToolInput = In<typeof s.researchResultInput>;
 
 // ── Plumbing ────────────────────────────────────────────────────────────
 
@@ -165,8 +181,8 @@ function formatTool<I, O>(
 
 const DESCRIPTIONS = {
   search:
-    "Search Google for current information. Returns organic results (title, link, snippet), the answer box, knowledge graph, People also ask and related searches. Set include_content to also read the top result pages. 1 credit.",
-  news: "Search Google News for recent articles: title, source, date, link and snippet. Use time to keep only the last hour, day or week. 1 credit.",
+    "Search Google for current information. Returns organic results (title, link, snippet), the answer box, knowledge graph, People also ask and related searches. Set include_content to also read the top result pages, include_answer for a short cited answer over the results. 1 credit.",
+  news: "Search Google News for recent articles: title, source, date, link and snippet. Use time to keep only the last hour, day or week; include_answer adds a short cited answer. 1 credit.",
   images: "Search Google Images: image URLs, sizes, titles and source pages. 1 credit.",
   videos:
     "Search Google Videos (YouTube and other sites): title, link, channel, duration and date. 1 credit.",
@@ -188,7 +204,7 @@ const DESCRIPTIONS = {
   webpage:
     "Fetch one public URL (HTML or PDF) and return its main content as clean Markdown. Use it to read a search result in full. 1 credit.",
   extract:
-    "Read up to 20 URLs (HTML or PDF) as Markdown in one call. With query and highlights, return only the passages most relevant to the query instead of whole pages. 1 credit per page read; failed URLs are listed and free.",
+    "Read up to 20 URLs (HTML or PDF) as Markdown in one call. With query and highlights, return only the passages most relevant to the query instead of whole pages; with summary, also a short summary of each page. 1 credit per page read (more with summary); failed URLs are listed and free.",
   map: "List a website's URLs from its sitemaps and start page, optionally filtered and ranked by search words. Use it to find the right page on a site before reading it. 1 credit; free when nothing is found.",
   rank: "Find where a domain ranks on Google for a keyword: its best organic position (null when absent) and each matching result in the top num.",
   crawl:
@@ -197,6 +213,14 @@ const DESCRIPTIONS = {
     "Crawl one website and return its pages as Markdown, following links up to max_depth hops and the site's sitemaps, honouring robots.txt. With query, the most relevant pages are read first. 1 credit per page read.",
   crawl_result:
     "Get the status, progress or pages of a crawl started with the crawl tool. While status is queued or running, call it again later. Free.",
+  answer:
+    "Answer a question from live Google results: a short Markdown answer citing numbered sources with [n] markers, plus the cited links. depth fast answers from the result page; standard (default) also reads the top pages and costs more. If the answer fails, its model part is not charged.",
+  research:
+    "Start an async deep-research task: planned Google searches, page reading and a cited Markdown report. Returns a task id: call research_result with it in about a minute. A flat price per effort (lite, standard, deep), charged only when the report is written.",
+  researchWait:
+    "Research a question in depth: planned Google searches, page reading and a cited Markdown report with numbered sources. Takes one to several minutes. A flat price per effort (lite, standard, deep), charged only when the report is written.",
+  research_result:
+    "Get the status, progress or report of a research task started with the research tool. While status is queued or running, call it again later. Free.",
 } as const;
 
 const build = {
@@ -347,6 +371,41 @@ const build = {
       execute: async ({ id }, { abortSignal }: Exec = {}) =>
         c().getCrawl(id, { signal: abortSignal }),
     }),
+  answer: (
+    o: ParamsToolOptions<AnswerParams>,
+    c: GetClient,
+  ): Tool<AnswerToolInput, AnswerResponse> =>
+    tool({
+      description: o.description ?? DESCRIPTIONS.answer,
+      inputSchema: s.answerInput,
+      execute: async (input, { abortSignal }: Exec = {}) =>
+        c().answer(merge(o, input), { signal: abortSignal }),
+    }),
+  research: (
+    o: ResearchToolOptions,
+    c: GetClient,
+  ): Tool<ResearchToolInput, TaskCreated | ResearchTask> =>
+    tool({
+      description: o.description ?? (o.wait ? DESCRIPTIONS.researchWait : DESCRIPTIONS.research),
+      inputSchema: s.researchInput,
+      execute: async (input, { abortSignal }: Exec = {}): Promise<TaskCreated | ResearchTask> => {
+        const sk = c();
+        const task = await sk.research(merge(o, input), { signal: abortSignal });
+        if (!o.wait) return task;
+        const w = o.wait === true ? {} : o.wait;
+        return sk.waitResearch(task, { ...w, signal: w.signal ?? abortSignal });
+      },
+    }),
+  research_result: (
+    o: BaseToolOptions,
+    c: GetClient,
+  ): Tool<ResearchResultToolInput, ResearchTask> =>
+    tool({
+      description: o.description ?? DESCRIPTIONS.research_result,
+      inputSchema: s.researchResultInput,
+      execute: async ({ id }, { abortSignal }: Exec = {}) =>
+        c().getResearch(id, { signal: abortSignal }),
+    }),
 };
 
 // ── Single tools ────────────────────────────────────────────────────────
@@ -405,6 +464,14 @@ export const serpkiteCrawl = (o: CrawlToolOptions = {}) => build.crawl(o, lazyCl
 /** Status, progress or pages of a crawl. */
 export const serpkiteCrawlResult = (o: BaseToolOptions = {}) =>
   build.crawl_result(o, lazyClient(o));
+/** A cited answer from live Google results (`answer`, `citations`, `results`). */
+export const serpkiteAnswer = (o: ParamsToolOptions<AnswerParams> = {}) =>
+  build.answer(o, lazyClient(o));
+/** Starts an async research task, or waits for its cited report with `wait`. */
+export const serpkiteResearch = (o: ResearchToolOptions = {}) => build.research(o, lazyClient(o));
+/** Status, progress or report of a research task. */
+export const serpkiteResearchResult = (o: BaseToolOptions = {}) =>
+  build.research_result(o, lazyClient(o));
 
 // ── Tool set ────────────────────────────────────────────────────────────
 
@@ -432,6 +499,9 @@ export interface SerpKiteToolSet<F extends ToolFormat = "markdown"> {
   rank: Tool<RankToolInput, RankResponse>;
   crawl: Tool<CrawlToolInput, TaskCreated | CrawlTask>;
   crawl_result: Tool<CrawlResultToolInput, CrawlTask>;
+  answer: Tool<AnswerToolInput, AnswerResponse>;
+  research: Tool<ResearchToolInput, TaskCreated | ResearchTask>;
+  research_result: Tool<ResearchResultToolInput, ResearchTask>;
 }
 
 export interface SerpKiteToolsOptions<K extends SerpKiteToolName, F extends ToolFormat>
@@ -442,7 +512,7 @@ export interface SerpKiteToolsOptions<K extends SerpKiteToolName, F extends Tool
   exclude?: readonly SerpKiteToolName[];
   /** Response shape of the search, place and page tools. Default `"markdown"`. */
   format?: F;
-  /** `wait` of the crawl tool (see `serpkiteCrawl`). */
+  /** `wait` of the crawl and research tools (see `serpkiteCrawl`, `serpkiteResearch`). */
   wait?: CrawlToolOptions["wait"];
 }
 
