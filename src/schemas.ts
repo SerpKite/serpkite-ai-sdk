@@ -105,7 +105,20 @@ export const newsInput = z
   .required({ q: true });
 
 export const imagesInput = z
-  .object({ ...geo, ...filters, time, safe })
+  .object({
+    ...geo,
+    ...filters,
+    time,
+    safe,
+    num: z
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .describe(
+        "Images to return from the page, 1-100. Default all: a page holds up to 100 and page 2 starts at 101",
+      ),
+  })
   .partial()
   .required({ q: true });
 export const videosInput = z

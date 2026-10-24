@@ -183,7 +183,8 @@ const DESCRIPTIONS = {
   search:
     "Search Google for current information. Returns organic results (title, link, snippet), the answer box, knowledge graph, People also ask and related searches. Set include_content to also read the top result pages, include_answer for a short cited answer over the results. 1 credit.",
   news: "Search Google News for recent articles: title, source, date, link and snippet. Use time to keep only the last hour, day or week; include_answer adds a short cited answer. 1 credit.",
-  images: "Search Google Images: image URLs, sizes, titles and source pages. 1 credit.",
+  images:
+    "Search Google Images: image URLs, sizes, titles and source pages, up to 100 per page. 1 credit per page.",
   videos:
     "Search Google Videos (YouTube and other sites): title, link, channel, duration and date. 1 credit.",
   maps: 'Find places on Google Maps: name, address, category, rating, review count, phone, website, hours, coordinates and place_id. Put the area in q ("coffee in Berlin") or set location or ll. 1 credit.',
