@@ -233,13 +233,13 @@ const DESCRIPTIONS = {
   research_result:
     "Get the status, progress or report of a research task started with the research tool. While status is queued or running, call it again later. Free.",
   chatgpt:
-    "Ask ChatGPT (chatgpt.com, as a logged-out user, searching the web) and get its answer with the sources it cited and the products and places it showed: what ChatGPT tells people. track lists brands or domains to check the answer for. 5 credits; takes 10-90 s; free if it fails. If it fails with upstream_timeout saying the answer is being finished in the background, call again with the same input within 10 minutes.",
+    "Ask ChatGPT (chatgpt.com, as a logged-out user, searching the web) and get its answer with the sources it cited and the products and places it showed: what ChatGPT tells people. track lists brands or domains to check the answer for. 4 credits; takes 10-90 s; free if it fails. If it fails with upstream_timeout saying the answer is being finished in the background, call again with the same input within 10 minutes.",
   gemini:
-    "Ask Google Gemini (gemini.google.com, as a logged-out user) and get its answer with the sources it grounded on: what Gemini tells people. track lists brands or domains to check the answer for. 5 credits; takes 10-90 s; free if it fails. If it fails with upstream_timeout saying the answer is being finished in the background, call again with the same input within 10 minutes.",
+    "Ask Google Gemini (gemini.google.com, as a logged-out user) and get its answer with the sources it grounded on: what Gemini tells people. track lists brands or domains to check the answer for. 3 credits; takes 10-90 s; free if it fails. If it fails with upstream_timeout saying the answer is being finished in the background, call again with the same input within 10 minutes.",
   copilot:
     "Ask Microsoft Copilot Search on Bing and get its answer with cited sources and products. track lists brands or domains to check the answer for. 3 credits; takes 15-40 s; free if it fails.",
   ai_mode:
-    "Ask Google AI Mode and get its answer with cited sources and products. track lists brands or domains to check the answer for. 3 credits; takes 10-45 s; free if it fails.",
+    "Ask Google AI Mode and get its answer with cited sources and products. track lists brands or domains to check the answer for. 2 credits; takes 10-45 s; free if it fails.",
   brave_ai:
     "Ask Brave Search's AI answer and get it with cited sources, the searches it ran and products. track lists brands or domains to check the answer for. 2 credits; about 10 s; free if it fails.",
 } as const;
@@ -534,10 +534,10 @@ export const serpkiteResearch = (o: ResearchToolOptions = {}) => build.research(
 export const serpkiteResearchResult = (o: BaseToolOptions = {}) =>
   build.research_result(o, lazyClient(o));
 
-/** ChatGPT's answer (logged out, searching the web) with sources, products and `mentions`. 5 credits. */
+/** ChatGPT's answer (logged out, searching the web) with sources, products and `mentions`. 4 credits. */
 export const serpkiteChatGPT = <F extends ToolFormat = "markdown">(o: Fmt<ChatGPTParams, F> = {}) =>
   build.chatgpt(o, lazyClient(o));
-/** Google Gemini's answer (logged out) with the sources it grounded on. 5 credits. */
+/** Google Gemini's answer (logged out) with the sources it grounded on. 3 credits. */
 export const serpkiteGemini = <F extends ToolFormat = "markdown">(
   o: Fmt<AssistantParams, F> = {},
 ) => build.gemini(o, lazyClient(o));
@@ -545,7 +545,7 @@ export const serpkiteGemini = <F extends ToolFormat = "markdown">(
 export const serpkiteCopilot = <F extends ToolFormat = "markdown">(
   o: Fmt<AssistantParams, F> = {},
 ) => build.copilot(o, lazyClient(o));
-/** Google AI Mode answer with cited sources and products. 3 credits. */
+/** Google AI Mode answer with cited sources and products. 2 credits. */
 export const serpkiteAIMode = <F extends ToolFormat = "markdown">(
   o: Fmt<AssistantParams, F> = {},
 ) => build.ai_mode(o, lazyClient(o));
@@ -562,7 +562,7 @@ export const TOOL_NAMES = Object.keys(build) as SerpKiteToolName[];
 
 /**
  * The AI assistant tools (ChatGPT, Gemini, Copilot, AI Mode, Brave AI). `serpkiteTools` adds
- * them only when `only` names them: each answer costs 2-5 credits and takes 10-90 s.
+ * them only when `only` names them: each answer costs 2-4 credits and takes 10-90 s.
  */
 export const ASSISTANT_TOOL_NAMES = [
   "chatgpt",

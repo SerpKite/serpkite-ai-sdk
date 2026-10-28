@@ -95,7 +95,7 @@ runtime (`export const runtime = "edge"`).
 | `ai_mode` | `/v1/ai_mode` | Google AI Mode answer with cited sources and products |
 | `brave_ai` | `/v1/brave_ai` | Brave Search's AI answer with cited sources, the searches it ran and products |
 
-`serpkiteTools()` returns every tool except the five AI assistants: an answer costs 2-5 credits and
+`serpkiteTools()` returns every tool except the five AI assistants: an answer costs 2-4 credits and
 takes 10-90 s, so add them by name (`only: ["search", "chatgpt", "gemini"]`) or use their factories.
 
 Each tool also has its own factory (`serpkiteSearch()`, `serpkiteWebpage()`, `serpkiteChatGPT()`,
