@@ -200,7 +200,7 @@ export const placeInput = z
 export const webpageInput = z
   .object({
     url,
-    country: country.describe("Fetch through an exit in this country, for geo-dependent pages"),
+    country: country.describe("Fetch the page as seen from this country, for geo-dependent pages"),
     include_links: z.boolean().describe("Also return the page's outbound links"),
   })
   .partial()
@@ -220,7 +220,7 @@ export const extractInput = z
       .max(10)
       .describe("Return only this many passages per page ranked against query (0 = whole page)"),
     max_tokens: maxTokens,
-    country: country.describe("Fetch through an exit in this country"),
+    country: country.describe("Fetch the pages as seen from this country"),
     summary: z
       .boolean()
       .describe(
