@@ -2,7 +2,10 @@ import { type Tool, tool } from "ai";
 import {
   type AnswerParams,
   type AnswerResponse,
+  type AssistantParams,
+  type AssistantResponse,
   type AutocompleteResponse,
+  type ChatGPTParams,
   type CompactResponse,
   type CrawlParams,
   type CrawlTask,
@@ -109,6 +112,8 @@ export type CrawlResultToolInput = In<typeof s.crawlResultInput>;
 export type AnswerToolInput = In<typeof s.answerInput>;
 export type ResearchToolInput = In<typeof s.researchInput>;
 export type ResearchResultToolInput = In<typeof s.researchResultInput>;
+export type ChatGPTToolInput = In<typeof s.chatgptInput>;
+export type AssistantToolInput = In<typeof s.assistantInput>;
 
 // ── Plumbing ────────────────────────────────────────────────────────────
 
@@ -154,7 +159,12 @@ type FormatMethod =
   | "scholar"
   | "patents"
   | "autocomplete"
-  | "webpage";
+  | "webpage"
+  | "chatgpt"
+  | "gemini"
+  | "copilot"
+  | "aiMode"
+  | "braveAi";
 
 function formatTool<I, O>(
   method: FormatMethod,
@@ -222,6 +232,16 @@ const DESCRIPTIONS = {
     "Research a question in depth: planned Google searches, page reading and a cited Markdown report with numbered sources. Takes one to several minutes. A flat price per effort (lite, standard, deep), charged only when the report is written.",
   research_result:
     "Get the status, progress or report of a research task started with the research tool. While status is queued or running, call it again later. Free.",
+  chatgpt:
+    "Ask ChatGPT (chatgpt.com, as a logged-out user, searching the web) and get its answer with the sources it cited and the products and places it showed: what ChatGPT tells people. track lists brands or domains to check the answer for. 5 credits; takes 10-90 s; free if it fails. If it fails with upstream_timeout saying the answer is being finished in the background, call again with the same input within 10 minutes.",
+  gemini:
+    "Ask Google Gemini (gemini.google.com, as a logged-out user) and get its answer with the sources it grounded on: what Gemini tells people. track lists brands or domains to check the answer for. 5 credits; takes 10-90 s; free if it fails. If it fails with upstream_timeout saying the answer is being finished in the background, call again with the same input within 10 minutes.",
+  copilot:
+    "Ask Microsoft Copilot Search on Bing and get its answer with cited sources and products. track lists brands or domains to check the answer for. 3 credits; takes 15-40 s; free if it fails.",
+  ai_mode:
+    "Ask Google AI Mode and get its answer with cited sources and products. track lists brands or domains to check the answer for. 3 credits; takes 10-45 s; free if it fails.",
+  brave_ai:
+    "Ask Brave Search's AI answer and get it with cited sources, the searches it ran and products. track lists brands or domains to check the answer for. 2 credits; about 10 s; free if it fails.",
 } as const;
 
 const build = {
@@ -407,6 +427,46 @@ const build = {
       execute: async ({ id }, { abortSignal }: Exec = {}) =>
         c().getResearch(id, { signal: abortSignal }),
     }),
+  chatgpt: <F extends ToolFormat>(o: FormatToolOptions<ChatGPTParams, F>, c: GetClient) =>
+    formatTool<ChatGPTToolInput, FormatOutput<F, AssistantResponse>>(
+      "chatgpt",
+      s.chatgptInput,
+      DESCRIPTIONS.chatgpt,
+      o,
+      c,
+    ),
+  gemini: <F extends ToolFormat>(o: FormatToolOptions<AssistantParams, F>, c: GetClient) =>
+    formatTool<AssistantToolInput, FormatOutput<F, AssistantResponse>>(
+      "gemini",
+      s.assistantInput,
+      DESCRIPTIONS.gemini,
+      o,
+      c,
+    ),
+  copilot: <F extends ToolFormat>(o: FormatToolOptions<AssistantParams, F>, c: GetClient) =>
+    formatTool<AssistantToolInput, FormatOutput<F, AssistantResponse>>(
+      "copilot",
+      s.assistantInput,
+      DESCRIPTIONS.copilot,
+      o,
+      c,
+    ),
+  ai_mode: <F extends ToolFormat>(o: FormatToolOptions<AssistantParams, F>, c: GetClient) =>
+    formatTool<AssistantToolInput, FormatOutput<F, AssistantResponse>>(
+      "aiMode",
+      s.assistantInput,
+      DESCRIPTIONS.ai_mode,
+      o,
+      c,
+    ),
+  brave_ai: <F extends ToolFormat>(o: FormatToolOptions<AssistantParams, F>, c: GetClient) =>
+    formatTool<AssistantToolInput, FormatOutput<F, AssistantResponse>>(
+      "braveAi",
+      s.assistantInput,
+      DESCRIPTIONS.brave_ai,
+      o,
+      c,
+    ),
 };
 
 // ── Single tools ────────────────────────────────────────────────────────
@@ -474,11 +534,49 @@ export const serpkiteResearch = (o: ResearchToolOptions = {}) => build.research(
 export const serpkiteResearchResult = (o: BaseToolOptions = {}) =>
   build.research_result(o, lazyClient(o));
 
+/** ChatGPT's answer (logged out, searching the web) with sources, products and `mentions`. 5 credits. */
+export const serpkiteChatGPT = <F extends ToolFormat = "markdown">(o: Fmt<ChatGPTParams, F> = {}) =>
+  build.chatgpt(o, lazyClient(o));
+/** Google Gemini's answer (logged out) with the sources it grounded on. 5 credits. */
+export const serpkiteGemini = <F extends ToolFormat = "markdown">(
+  o: Fmt<AssistantParams, F> = {},
+) => build.gemini(o, lazyClient(o));
+/** Microsoft Copilot Search (Bing) answer with cited sources and products. 3 credits. */
+export const serpkiteCopilot = <F extends ToolFormat = "markdown">(
+  o: Fmt<AssistantParams, F> = {},
+) => build.copilot(o, lazyClient(o));
+/** Google AI Mode answer with cited sources and products. 3 credits. */
+export const serpkiteAIMode = <F extends ToolFormat = "markdown">(
+  o: Fmt<AssistantParams, F> = {},
+) => build.ai_mode(o, lazyClient(o));
+/** Brave Search's AI answer with cited sources, its searches and products. 2 credits. */
+export const serpkiteBraveAI = <F extends ToolFormat = "markdown">(
+  o: Fmt<AssistantParams, F> = {},
+) => build.brave_ai(o, lazyClient(o));
+
 // ── Tool set ────────────────────────────────────────────────────────────
 
 /** Tool names; the same as the SerpKite remote MCP server's where both have the tool. */
 export type SerpKiteToolName = keyof typeof build;
 export const TOOL_NAMES = Object.keys(build) as SerpKiteToolName[];
+
+/**
+ * The AI assistant tools (ChatGPT, Gemini, Copilot, AI Mode, Brave AI). `serpkiteTools` adds
+ * them only when `only` names them: each answer costs 2-5 credits and takes 10-90 s.
+ */
+export const ASSISTANT_TOOL_NAMES = [
+  "chatgpt",
+  "gemini",
+  "copilot",
+  "ai_mode",
+  "brave_ai",
+] as const;
+export type AssistantToolName = (typeof ASSISTANT_TOOL_NAMES)[number];
+/** The tools `serpkiteTools` returns without `only`: every tool except the AI assistants. */
+export type DefaultToolName = Exclude<SerpKiteToolName, AssistantToolName>;
+export const DEFAULT_TOOL_NAMES = TOOL_NAMES.filter(
+  (n): n is DefaultToolName => !(ASSISTANT_TOOL_NAMES as readonly string[]).includes(n),
+);
 
 /** The tools `serpkiteTools` returns for a `format`. */
 export interface SerpKiteToolSet<F extends ToolFormat = "markdown"> {
@@ -503,15 +601,23 @@ export interface SerpKiteToolSet<F extends ToolFormat = "markdown"> {
   answer: Tool<AnswerToolInput, AnswerResponse>;
   research: Tool<ResearchToolInput, TaskCreated | ResearchTask>;
   research_result: Tool<ResearchResultToolInput, ResearchTask>;
+  chatgpt: Tool<ChatGPTToolInput, FormatOutput<F, AssistantResponse>>;
+  gemini: Tool<AssistantToolInput, FormatOutput<F, AssistantResponse>>;
+  copilot: Tool<AssistantToolInput, FormatOutput<F, AssistantResponse>>;
+  ai_mode: Tool<AssistantToolInput, FormatOutput<F, AssistantResponse>>;
+  brave_ai: Tool<AssistantToolInput, FormatOutput<F, AssistantResponse>>;
 }
 
 export interface SerpKiteToolsOptions<K extends SerpKiteToolName, F extends ToolFormat>
   extends Omit<BaseToolOptions, "description"> {
-  /** Only these tools. Default: all. A short list helps a model pick the right tool. */
+  /**
+   * Only these tools. Default: every tool except the AI assistants (`ASSISTANT_TOOL_NAMES`),
+   * which are added only when listed here. A short list helps a model pick the right tool.
+   */
   only?: readonly K[];
   /** Leave these tools out. */
   exclude?: readonly SerpKiteToolName[];
-  /** Response shape of the search, place and page tools. Default `"markdown"`. */
+  /** Response shape of the search, place, page and AI assistant tools. Default `"markdown"`. */
   format?: F;
   /** `wait` of the crawl and research tools (see `serpkiteCrawl`, `serpkiteResearch`). */
   wait?: CrawlToolOptions["wait"];
@@ -522,13 +628,13 @@ export interface SerpKiteToolsOptions<K extends SerpKiteToolName, F extends Tool
  * `tools: serpkiteTools({ only: ["search", "webpage"] })`.
  */
 export function serpkiteTools<
-  K extends SerpKiteToolName = SerpKiteToolName,
+  K extends SerpKiteToolName = DefaultToolName,
   F extends ToolFormat = "markdown",
 >(options: SerpKiteToolsOptions<K, F> = {}): Pick<SerpKiteToolSet<F>, K> {
   const { only, exclude, format, wait } = options;
   const getClient = lazyClient(options);
   const out: Record<string, unknown> = {};
-  for (const name of only ?? TOOL_NAMES) {
+  for (const name of only ?? DEFAULT_TOOL_NAMES) {
     if (exclude?.includes(name)) continue;
     const make = build[name] as (o: object, c: GetClient) => unknown;
     out[name] = make({ format, wait }, getClient);

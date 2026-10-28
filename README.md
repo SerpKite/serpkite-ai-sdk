@@ -2,7 +2,7 @@
 
 [SerpKite](https://serpkite.com) tools for the [Vercel AI SDK](https://ai-sdk.dev): Google search,
 news, maps, place details, reviews, shopping, scholar, patents, cited answers, deep research,
-webpage-to-Markdown, multi-URL extract, site map and crawl, ready for `generateText`, `streamText` and agents in Next.js, Node and edge runtimes.
+what ChatGPT, Gemini, Copilot, Google AI Mode and Brave AI answer, webpage-to-Markdown, multi-URL extract, site map and crawl, ready for `generateText`, `streamText` and agents in Next.js, Node and edge runtimes.
 
 - One line per tool set: `tools: serpkiteTools()`.
 - Markdown results by default, which use few tokens and need no post-processing.
@@ -89,8 +89,17 @@ runtime (`export const runtime = "edge"`).
 | `answer` | `/v1/answer` | A short Markdown answer from live Google results, citing numbered sources (`[n]`), and the cited links |
 | `research` | `/v1/research` | Starts an async deep-research task (returns a task id) |
 | `research_result` | `/v1/research/{id}` | The research task's status, progress and cited Markdown report |
+| `chatgpt` | `/v1/chatgpt` | ChatGPT's answer (logged out, searching the web) with cited sources, products, places and `mentions` of `track` terms |
+| `gemini` | `/v1/gemini` | Google Gemini's answer with the sources it grounded on |
+| `copilot` | `/v1/copilot` | Microsoft Copilot Search (Bing) answer with cited sources and products |
+| `ai_mode` | `/v1/ai_mode` | Google AI Mode answer with cited sources and products |
+| `brave_ai` | `/v1/brave_ai` | Brave Search's AI answer with cited sources, the searches it ran and products |
 
-Each tool also has its own factory (`serpkiteSearch()`, `serpkiteWebpage()`, …) so you can name it
+`serpkiteTools()` returns every tool except the five AI assistants: an answer costs 2-5 credits and
+takes 10-90 s, so add them by name (`only: ["search", "chatgpt", "gemini"]`) or use their factories.
+
+Each tool also has its own factory (`serpkiteSearch()`, `serpkiteWebpage()`, `serpkiteChatGPT()`,
+`serpkiteGemini()`, `serpkiteCopilot()`, `serpkiteAIMode()`, `serpkiteBraveAI()`, …) so you can name it
 yourself: `tools: { webSearch: serpkiteSearch() }`. Credits per call are listed at
 [serpkite.com/pricing](https://serpkite.com/pricing); failed and empty results are free.
 
@@ -99,7 +108,7 @@ yourself: `tools: { webSearch: serpkiteSearch() }`. Credits per call are listed 
 ```ts
 serpkiteTools({
   only: ["search", "news"], // or exclude: ["crawl", "crawl_result"]
-  format: "compact", // "markdown" (default) | "compact" | "json" for the search/page tools
+  format: "compact", // "markdown" (default) | "compact" | "json" for the search, page and assistant tools
   apiKey: "skt_live_...", // default: SERPKITE_API_KEY
   client: new SerpKite({ timeoutMs: 30_000 }), // or pass your own client
 });
@@ -130,6 +139,24 @@ extract and research) and `webhook_url` (research).
 
 Errors are thrown as `SerpKiteError` (`status`, `code`, `requestId`). The AI SDK turns a thrown
 error into a `tool-error` part the model can read, so a failed search doesn't end the run.
+
+## AI visibility: what assistants say about you
+
+```ts
+import { serpkiteChatGPT, serpkiteGemini } from "@serpkite/ai-sdk";
+
+const tools = {
+  chatgpt: serpkiteChatGPT({ fixed: { track: ["acme.com", "Acme"] } }), // the model can't drop track
+  gemini: serpkiteGemini({ format: "json", defaults: { country: "de" } }), // typed AssistantResponse
+};
+```
+
+The assistant tools return the answer as Markdown by default, with `[n](link)` citations, the
+sources, products and places it showed, and how each `track` term was mentioned. With `format: "json"` they return the typed
+`AssistantResponse` (`text`, `markdown`, `sources`, `search_queries`, `products`, `places`, and
+`mentions` for each `track` term: named in the text, cited, listed as a source or product).
+Answers take 10-90 s, so raise the route's `maxDuration`; failed and empty answers are free.
+`web_search` is ChatGPT only, and `language` is offered to every assistant but ChatGPT.
 
 ## License
 

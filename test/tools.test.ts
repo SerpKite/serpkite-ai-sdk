@@ -2,12 +2,19 @@ import { describe, expect, test } from "bun:test";
 import { asSchema, generateText, stepCountIs, type Tool } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import {
+  ASSISTANT_TOOL_NAMES,
+  DEFAULT_TOOL_NAMES,
   SerpKite,
   SerpKiteError,
+  serpkiteAIMode,
   serpkiteAnswer,
+  serpkiteBraveAI,
+  serpkiteChatGPT,
+  serpkiteCopilot,
   serpkiteCrawl,
   serpkiteCrawlResult,
   serpkiteExtract,
+  serpkiteGemini,
   serpkiteMaps,
   serpkitePlace,
   serpkiteRank,
@@ -245,9 +252,85 @@ describe("AI tools", () => {
   });
 });
 
+describe("AI assistant tools", () => {
+  const answer = {
+    request: { endpoint: "chatgpt", prompt: "best crm" },
+    text: "HubSpot [1]",
+    markdown: "HubSpot [1](https://hubspot.com/)",
+    sources: [{ position: 1, link: "https://hubspot.com/", domain: "hubspot.com", cited: true }],
+    search_queries: ["best crm"],
+    products: [],
+    mentions: [
+      { term: "hubspot.com", mentioned: true, cited: true, sources: [1], text_position: 1 },
+    ],
+    meta: { request_id: "r", credits_used: 5 },
+  };
+
+  test("chatgpt posts the prompt with format=markdown and returns the text", async () => {
+    const { fetch, seen } = mockFetch(() => markdown("HubSpot [1](https://hubspot.com/)"));
+    const out = await run(serpkiteChatGPT(opts(fetch)), {
+      prompt: "best crm",
+      web_search: false,
+      track: ["hubspot.com"],
+      country: null,
+    });
+    expect(out).toBe("HubSpot [1](https://hubspot.com/)");
+    expect(seen[0].url).toBe("https://api.serpkite.com/v1/chatgpt");
+    expect(seen[0].body).toEqual({
+      prompt: "best crm",
+      web_search: false,
+      track: ["hubspot.com"],
+      format: "markdown",
+    });
+  });
+
+  test("each assistant hits its endpoint; json returns the typed response", async () => {
+    const { fetch, seen } = mockFetch(() => json(answer));
+    const o = { ...opts(fetch), format: "json" as const };
+    const tools = [serpkiteGemini(o), serpkiteCopilot(o), serpkiteAIMode(o), serpkiteBraveAI(o)];
+    for (const t of tools) {
+      expect(await run(t, { prompt: "best crm", language: "de" })).toEqual(answer);
+    }
+    expect(seen.map((r) => new URL(r.url).pathname)).toEqual([
+      "/v1/gemini",
+      "/v1/copilot",
+      "/v1/ai_mode",
+      "/v1/brave_ai",
+    ]);
+    expect(seen[0].body).toEqual({ prompt: "best crm", language: "de", format: "json" });
+  });
+
+  test("fixed track applies over the model's input", async () => {
+    const { fetch, seen } = mockFetch(() => markdown("ok"));
+    await run(serpkiteGemini({ ...opts(fetch), fixed: { track: ["Acme"], include_html: false } }), {
+      prompt: "x",
+      track: ["Other"],
+    });
+    expect(seen[0].body).toEqual({
+      prompt: "x",
+      track: ["Acme"],
+      include_html: false,
+      format: "markdown",
+    });
+  });
+
+  test("opt-in in serpkiteTools", async () => {
+    const all = serpkiteTools({ apiKey: "k" });
+    for (const n of ASSISTANT_TOOL_NAMES) expect(n in all).toBe(false);
+    const { fetch, seen } = mockFetch(() => markdown("ok"));
+    const tools = serpkiteTools({ ...opts(fetch), only: ["search", "chatgpt", "brave_ai"] });
+    expect(Object.keys(tools)).toEqual(["search", "chatgpt", "brave_ai"]);
+    expect(await run(tools.brave_ai, { prompt: "x" })).toBe("ok");
+    expect(seen[0].url).toBe("https://api.serpkite.com/v1/brave_ai");
+  });
+});
+
 describe("serpkiteTools", () => {
-  test("all tools by default, with only and exclude", () => {
-    expect(Object.keys(serpkiteTools({ apiKey: "k" })).sort()).toEqual([...TOOL_NAMES].sort());
+  test("all tools but the assistants by default, with only and exclude", () => {
+    expect(Object.keys(serpkiteTools({ apiKey: "k" })).sort()).toEqual(
+      [...DEFAULT_TOOL_NAMES].sort(),
+    );
+    expect(DEFAULT_TOOL_NAMES.length + ASSISTANT_TOOL_NAMES.length).toBe(TOOL_NAMES.length);
     expect(Object.keys(serpkiteTools({ apiKey: "k", only: ["search", "webpage"] }))).toEqual([
       "search",
       "webpage",
@@ -461,12 +544,23 @@ const ALLOWED: Record<string, { allowed: string[]; required: string[] }> = {
     required: ["input"],
   },
   research_result: { allowed: ["id"], required: ["id"] },
+  chatgpt: {
+    allowed: ["prompt", "country", "include_html", "web_search", "track"],
+    required: ["prompt"],
+  },
+  gemini: {
+    allowed: ["prompt", "country", "language", "include_html", "track"],
+    required: ["prompt"],
+  },
 };
+ALLOWED.copilot = ALLOWED.gemini;
+ALLOWED.ai_mode = ALLOWED.gemini;
+ALLOWED.brave_ai = ALLOWED.gemini;
 ALLOWED.videos = ALLOWED.images;
 ALLOWED.places = ALLOWED.maps;
 
 describe("input schemas", () => {
-  const tools = serpkiteTools({ apiKey: "k" });
+  const tools = serpkiteTools({ apiKey: "k", only: TOOL_NAMES });
   for (const name of TOOL_NAMES) {
     test(`${name} offers only fields the endpoint honours`, () => {
       const spec = ALLOWED[name];

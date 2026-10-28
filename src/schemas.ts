@@ -323,3 +323,43 @@ export const researchInput = z
 export const researchResultInput = z.object({
   id: z.string().min(1).describe("The task id returned by the research tool"),
 });
+
+// AI assistants (verticalParams: prompt, country, track; language on every assistant but
+// ChatGPT, web_search on ChatGPT only). include_html is left to `defaults` / `fixed`.
+const prompt = z.string().min(1).max(4000).describe("The message to the assistant");
+const track = z
+  .array(z.string().max(100))
+  .max(20)
+  .describe(
+    'Brands ("Acme") and domains ("acme.com", subdomains match) to check the answer for; each comes back in mentions (named in the text, cited, listed as a source or product)',
+  );
+const askFrom = z
+  .string()
+  .length(2)
+  .describe(
+    "Ask from this country (ISO 3166-1 alpha-2), e.g. us, de: answers, prices and shops follow it",
+  );
+
+export const chatgptInput = z
+  .object({
+    prompt,
+    web_search: z
+      .boolean()
+      .describe("Make ChatGPT search the web (default true); false lets it decide"),
+    country: askFrom,
+    track,
+  })
+  .partial()
+  .required({ prompt: true });
+
+export const assistantInput = z
+  .object({
+    prompt,
+    country: askFrom,
+    language: z
+      .string()
+      .describe("Interface language, e.g. en, de; the answer follows the prompt's language"),
+    track,
+  })
+  .partial()
+  .required({ prompt: true });
